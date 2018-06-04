@@ -3,7 +3,7 @@
 volatile uint8_t	tFast		= 0;
 volatile uint8_t	tSeconds	= 0;
 volatile int	 	adcData		= 0;
-
+volatile uint8_t	state		= 0;
 
 
 //----------------------------------------------------------------
@@ -75,24 +75,14 @@ static void ConfigurePWMOutputTimer(void)
 // Setup ADC to read from the temp sensor.
 static void ConfigureADC(void)
 {
-	ADMUX	=	(0<<ADLAR)	|	// Right adjust result
-				(0<<REFS2)	|	// Vcc as ref, no bypass
-				(0<<REFS1)	|	// 
-				(0<<REFS0);		// 
+	ADMUX	=	ADC_RIGHTADJ|	// Right adjust result
+				ADC_VREF_VCC;	// Vcc as Aref
 
-	ADCSRA	=	(1<<ADEN)	|	// ADC Enable
-				(0<<ADSC)	|	// 
-				(0<<ADATE)	|	// 
-				(0<<ADIF)	|	// 
-				(1<<ADIE)	|	// Enable interrupts
-				(1<<ADPS2)	|	// Prescaler of 64
-				(1<<ADPS1)	|	// 6.4MHz / 64 = 100kHz ADC clock
-				(0<<ADPS0);		// ...
+	ADCSRA	=	ADC_ENABLE	|	// ADC Enable
+				ADC_INT_EN	|	// Enable interrupts
+				ADC_CLK_64;		// Fcpu/64
 
-	ADCSRB	=	(0<<ACME)	|	// Disable the analog comparator
-				(0<<ADTS2)	|	// Free running mode
-				(0<<ADTS1)	|	// ...
-				(0<<ADTS0);		// ...
+	ADCSRB	=	0;				// Nothing to set here
 }
 
 
@@ -156,6 +146,7 @@ static void init(void)
 	tFast		= 0;
 	tSeconds	= 0;
 	adcData		= 0;
+	state		= STATE_INIT;
 
 	// setup hardware
 	ConfigureSystemTimer();
@@ -196,7 +187,7 @@ static int GetLatestAdcData(void)
 
 //----------------------------------------------------------------
 // Converts the value from the temperature sensor to degrees C
-static int ConvertToCelcius(int adcSample)
+static uint8_t ConvertToCelcius(int adcSample)
 {
 	// Temperature sensor is a TMP35
 
@@ -213,7 +204,7 @@ static int ConvertToCelcius(int adcSample)
 	// result = ------ = 8.192
 	//            125
 
-	return adcSample * (1024 / 125);
+	return (uint8_t)(adcSample * (1024.0 / 125.0));
 }
 
 
@@ -222,19 +213,23 @@ static int ConvertToCelcius(int adcSample)
 // 49 & less = 0%
 // 50 - 99 = 50% to 100%
 // 100 & more = 100%
-static uint8_t MapFanSpeed(int temperature)
+static uint8_t MapFanSpeed(uint8_t temperature)
 {
+	uint8_t map = 0;
 	if (temperature < 50)
 	{
-		return 0;
+		map = 0;
 	}
-	
-	if (temperature > 99)
+	else if (temperature < 100)
 	{
-		return 100;
+		map = (uint8_t)((2.5 * (temperature - 50)) + 128);
 	}
-	
-	return (uint8_t)((2.5 * (temperature - 50)) + 128);
+	else
+	{
+		map = 100;
+	}
+
+	return map;
 }
 
 
@@ -253,6 +248,103 @@ static void SetFanSpeed(uint8_t speed)
 	{
 		DDRB &= ~(1<<PWM_OUTPUT);
 	}
+}
+
+
+//----------------------------------------------------------------
+// Sets the current processing state
+static void SetState(uint8_t whatState)
+{
+	// set the state
+	state = whatState;
+}
+
+
+//----------------------------------------------------------------
+// Gets the current processing state
+static uint8_t GetState(void)
+{
+	// return the state
+	return state;
+}
+
+
+//----------------------------------------------------------------
+// Processes the statemachine which responds to temperature changes
+static void ProcessStateMachine(void)
+{
+	static int decay			= 0;
+	static uint8_t lastTemp		= 0;
+
+	// read the current temperature and map it to a fan speed
+	uint8_t currentTemp = ConvertToCelcius(GetLatestAdcData());
+	uint8_t speed = MapFanSpeed(currentTemp);
+
+	switch (GetState())
+	{
+		case STATE_INIT:
+			SetFanSpeed(100);
+			decay = 5;
+			SetState(STATE_DECAY);
+			break;
+
+		case STATE_HOT:
+			decay = 30;
+			SetFanSpeed(speed);
+			SetState(STATE_HOT_NXT);
+			break;
+
+		case STATE_HOT_NXT:
+			// current temp has to keep dropping until the decay is 0
+			if (decay > 0)
+			{
+				if (currentTemp < lastTemp)
+				{
+					// hold speed here
+					decay--;
+				}
+				else
+				{
+					// let the fan speed increase
+					SetFanSpeed(speed);
+				}
+
+				decay--;
+				break;
+			}
+
+			SetState(STATE_NEXT);
+			break;
+
+		case STATE_COOL:
+			// just set the fan speed and allow the system to throttle
+			// down as necessary
+			SetFanSpeed(speed);
+			SetState(STATE_NEXT);
+			break;
+
+		case STATE_DECAY:
+			if (--decay > 0)
+				break;
+			SetState(STATE_NEXT);
+			break;
+
+		case STATE_NEXT:
+			// figure out if the current level of cooling is enough
+			if (currentTemp > lastTemp)
+			{
+				SetState(STATE_HOT);
+			}
+			else
+			{
+				SetState(STATE_COOL);
+			}
+
+			break;
+	}
+
+	// save the current temp
+	lastTemp = currentTemp;
 }
 
 
