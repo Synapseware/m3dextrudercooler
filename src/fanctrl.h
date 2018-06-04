@@ -14,7 +14,9 @@
 // Board constants
 #define DELAY			100
 #define	ADC_CHANNEL		3
+#define ADC_PIN			PB3
 #define ADC_SMOOTHING	4
+#define ADC_DIGITAL		ADC3D
 #define LED_DBG			PB4
 #define PWM_OUTPUT		PB0
 #define PWM_REG			OCR0A

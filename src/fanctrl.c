@@ -7,77 +7,6 @@ volatile int	 	adcData		= 0;
 
 
 //----------------------------------------------------------------
-// Selects the specified ADC channel
-void SelectADCChannel(uint8_t channel)
-{
-	switch (channel)
-	{
-		case 0x00:
-			// Channel 0
-			ADMUX = (ADMUX & 0xF0) | (0<<MUX3) | (0<MUX2) | (0<<MUX1) | (0<<MUX0);
-			DIDR0 = (1<<ADC0D);
-			DDRB &= ~(1<<PB5);
-			break;
-		case 0x01:
-			// Channel 1
-			ADMUX = (ADMUX & 0xF0) | (0<<MUX3) | (0<MUX2) | (0<<MUX1) | (1<<MUX0);
-			DIDR0 = (1<<ADC1D);
-			DDRB &= ~(1<<PB2);
-			break;
-		case 0x02:
-			// Channel 2
-			ADMUX = (ADMUX & 0xF0) | (0<<MUX3) | (0<MUX2) | (1<<MUX1) | (0<<MUX0);
-			DIDR0 = (1<<ADC2D);
-			DDRB &= ~(1<<PB4);
-			break;
-		case 0x03:
-			// Channel 3
-			ADMUX = (ADMUX & 0xF0) | (0<<MUX3) | (0<MUX2) | (1<<MUX1) | (1<<MUX0);
-			DIDR0 = (1<<ADC3D);
-			DDRB &= ~(1<<PB3);
-			break;
-		case 0x0C:
-			// Band-gap voltage
-			ADMUX = (ADMUX & 0xF0) | (1<<MUX3) | (1<MUX2) | (0<<MUX1) | (0<<MUX0);
-			break;
-		case 0x0D:
-			// Ground
-			ADMUX = (ADMUX & 0xF0) | (1<<MUX3) | (1<MUX2) | (0<<MUX1) | (1<<MUX0);
-			break;
-		case 0x0F:
-			// Internal temperature sensor
-			ADMUX = (ADMUX & 0xF0) | (1<<MUX3) | (1<MUX2) | (1<<MUX1) | (1<<MUX0);
-			break;
-	}
-}
-
-
-//----------------------------------------------------------------
-// Setup ADC to read from the temp sensor.  External analog reference
-// voltage is 2.5V
-static void initADC(void)
-{
-	ConfigureADC(ADC_CHANNEL);
-
-	ADMUX	=	(0<<ADLAR);		// Right adjust result
-
-	ADCSRA	=	(1<<ADEN)	|	// ADC Enable
-				(0<<ADSC)	|	// 
-				(0<<ADATE)	|	// 
-				(0<<ADIF)	|	// 
-				(1<<ADIE)	|	// Enable interrupts
-				(1<<ADPS2)	|	// Prescaler of 64
-				(1<<ADPS1)	|	// 8MHz / 64 = 125kHz ADC clock
-				(0<<ADPS0);		// ...
-
-	ADCSRB	=	(0<<ACME)	|	// Disable the analog comparator
-				(0<<ADTS2)	|	// Free running mode
-				(0<<ADTS1)	|	// ...
-				(0<<ADTS0);		// ...
-}
-
-
-//----------------------------------------------------------------
 // Configures Timer1 for 1Hz interrupt
 static void ConfigureSystemTimer(void)
 {
@@ -143,6 +72,77 @@ static void ConfigurePWMOutputTimer(void)
 
 
 //----------------------------------------------------------------
+// Setup ADC to read from the temp sensor.
+static void ConfigureADC(void)
+{
+	ADMUX	=	(0<<ADLAR)	|	// Right adjust result
+				(0<<REFS2)	|	// Vcc as ref, no bypass
+				(0<<REFS1)	|	// 
+				(0<<REFS0);		// 
+
+	ADCSRA	=	(1<<ADEN)	|	// ADC Enable
+				(0<<ADSC)	|	// 
+				(0<<ADATE)	|	// 
+				(0<<ADIF)	|	// 
+				(1<<ADIE)	|	// Enable interrupts
+				(1<<ADPS2)	|	// Prescaler of 64
+				(1<<ADPS1)	|	// 6.4MHz / 64 = 100kHz ADC clock
+				(0<<ADPS0);		// ...
+
+	ADCSRB	=	(0<<ACME)	|	// Disable the analog comparator
+				(0<<ADTS2)	|	// Free running mode
+				(0<<ADTS1)	|	// ...
+				(0<<ADTS0);		// ...
+}
+
+
+//----------------------------------------------------------------
+// Selects the specified ADC channel
+void SelectADCChannel(uint8_t channel)
+{
+	switch (channel)
+	{
+		case 0x00:
+			// Channel 0
+			ADMUX = (ADMUX & 0xF0) | (0<<MUX3) | (0<MUX2) | (0<<MUX1) | (0<<MUX0);
+			DIDR0 = (1<<ADC0D);
+			DDRB &= ~(1<<PB5);
+			break;
+		case 0x01:
+			// Channel 1
+			ADMUX = (ADMUX & 0xF0) | (0<<MUX3) | (0<MUX2) | (0<<MUX1) | (1<<MUX0);
+			DIDR0 = (1<<ADC1D);
+			DDRB &= ~(1<<PB2);
+			break;
+		case 0x02:
+			// Channel 2
+			ADMUX = (ADMUX & 0xF0) | (0<<MUX3) | (0<MUX2) | (1<<MUX1) | (0<<MUX0);
+			DIDR0 = (1<<ADC2D);
+			DDRB &= ~(1<<PB4);
+			break;
+		case 0x03:
+			// Channel 3
+			ADMUX = (ADMUX & 0xF0) | (0<<MUX3) | (0<MUX2) | (1<<MUX1) | (1<<MUX0);
+			DIDR0 = (1<<ADC3D);
+			DDRB &= ~(1<<PB3);
+			break;
+		case 0x0C:
+			// Band-gap voltage
+			ADMUX = (ADMUX & 0xF0) | (1<<MUX3) | (1<MUX2) | (0<<MUX1) | (0<<MUX0);
+			break;
+		case 0x0D:
+			// Ground
+			ADMUX = (ADMUX & 0xF0) | (1<<MUX3) | (1<MUX2) | (0<<MUX1) | (1<<MUX0);
+			break;
+		case 0x0F:
+			// Internal temperature sensor
+			ADMUX = (ADMUX & 0xF0) | (1<<MUX3) | (1<MUX2) | (1<<MUX1) | (1<<MUX0);
+			break;
+	}
+}
+
+
+//----------------------------------------------------------------
 // 
 static void init(void)
 {
@@ -152,6 +152,7 @@ static void init(void)
 	TIFR		= 0;
 	DDRB		= 0;
 	PORTB		= 0;
+	DIDR0		= 0;
 	tFast		= 0;
 	tSeconds	= 0;
 	adcData		= 0;
@@ -159,9 +160,19 @@ static void init(void)
 	// setup hardware
 	ConfigureSystemTimer();
 	ConfigurePWMOutputTimer();
+	ConfigureADC();
 	SelectADCChannel(ADC_CHANNEL);
 
 	sei();
+}
+
+
+//----------------------------------------------------------------
+// Flags the ADC to start a conversion
+static void StartConversion(void)
+{
+	// start an ADC conversion
+	ADCSRA |= (1<<ADSC);
 }
 
 
@@ -260,7 +271,7 @@ int main(void)
 		if (tSeconds && delay)
 		{
 			// establish averages and let temp. stabilize
-			ADCSRA |= (1<<ADSC);
+			StartConversion();
 
 			delay--;
 			tSeconds = 0;
@@ -273,20 +284,27 @@ int main(void)
 		// Runs at 100Hz
 		if (tFast)
 		{
+
 			tFast = 0;
 		}
 
 		// Runs at 1s
 		if (tSeconds)
 		{
-			// convert the ADC data to Celcius
-			int temperature = ConvertToCelcius(GetLatestAdcData());
-
-			// update the resistor ladder with new datate
-			SetFanSpeed(MapFanSpeed(temperature));
+			// Set the fan speed based on temperature
+			SetFanSpeed
+			(
+				MapFanSpeed
+				(
+					ConvertToCelcius
+					(
+						GetLatestAdcData()
+					)
+				)
+			);
 
 			// start another ADC conversion
-			ADCSRA |= (1<<ADSC);
+			StartConversion();
 
 			// reset the tick
 			tSeconds = 0;
