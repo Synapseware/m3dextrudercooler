@@ -76,7 +76,8 @@ SHARED = ../../libs
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = $(TARGET).c
+SRC =	$(TARGET).c			\
+		board.c
 
 
 # List library files here
