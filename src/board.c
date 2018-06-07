@@ -34,8 +34,8 @@ void ConfigurePWMOutputTimer(void)
 	// Setup PLLCSR - note: PLL is enabled via fuses because we are driving uC clock from the PLL! (pg 97)
 	PLLCSR	=	0;
 
-	OCR1A	=	128;			// Set default PWM duty cycle
-	OCR1C	=	255;			// PWM range
+	PWM_REG	=	128;			// Set default PWM duty cycle
+	PWM_TOP	=	255;			// PWM range
 
 	DDRB	|=	(1<<PWM_OUTPUT);	// Enable PWM output
 }
@@ -43,16 +43,18 @@ void ConfigurePWMOutputTimer(void)
 
 //----------------------------------------------------------------
 // Setup ADC to read from the temp sensor.
-void ConfigureADC(void)
+void ConfigureADC(uint8_t channel)
 {
 	ADMUX	=	ADC_RIGHTADJ|	// Right adjust result
 				ADC_VREF_VCC;	// Vcc as Aref
 
 	ADCSRA	=	ADC_ENABLE	|	// ADC Enable
 				ADC_INT_EN	|	// Enable interrupts
-				ADC_CLK_64;		// Fcpu/64
+				ADC_CLK_128;	// Fcpu/128
 
 	ADCSRB	=	0;				// Nothing to set here
+
+	SelectADCChannel(channel);
 }
 
 

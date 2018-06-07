@@ -29,8 +29,7 @@ static void init(void)
 	// setup hardware
 	ConfigureSystemTimer();
 	ConfigurePWMOutputTimer();
-	ConfigureADC();
-	SelectADCChannel(ADC_CHANNEL);
+	ConfigureADC(ADC_CHANNEL);
 	ConfigureDebugLed();
 
 	// enable interrupts
@@ -49,10 +48,10 @@ static void StartConversion(void)
 
 //----------------------------------------------------------------
 // Smooths the ADC sample by averaging readings
-static void ProcessADCValue(int adcSample)
+static void ProcessADCValue(int sample)
 {
 	// basic moving average
-	adcData = (adcSample>>2) + adcData - (adcData>>2);
+	adcData = (sample>>2) + adcData - (adcData>>2);
 }
 
 
@@ -67,24 +66,38 @@ static int GetLatestAdcData(void)
 
 //----------------------------------------------------------------
 // Converts the value from the temperature sensor to degrees C
-static uint8_t ConvertToCelcius(int adcSample)
+static uint8_t ConvertToCelcius(int sample)
 {
 	// Temperature sensor is a TMP35
 
 	// ADC transfer function:
 	// ADC value = (Vin * 1024) / Vref
 	//			Vin * 1024
-	// result = ----------
+	// sample = ----------   or,
 	//			   5.0v
 	// 
+	// Vin = 5.0v/1024
+	//
 	// TMP35 temperature range is 10-125/C
-	// 
-	// TMP35 transfer function:
-	//           1024
-	// result = ------ = 8.192
-	//            125
+	// 		Output voltage is 0.10 - 1.25
+	//		Output calibrated directly in degrees C
+	//
+	// The board has an op-amp which essentially multiplies the
+	// output from the TMP35 by 4.  So, full voltage range being
+	// input to the ADC is 0.4v to 5.0v
+	//
+	// TMP35 transfer function is 5.0/125, or 40mV/C (0.04V/C)
+	//
+	// To convert from an ADC sample to a temperature (Tc), we need:
+	//
+	// Tc = (sample * 5.0v/1024) / (5.0v / 125C)
+	//
+	// Constant portion of the ADC to temp. transfer function is about
+	// 0.12207
+	// Ex1: sample = 712: Temp = (712)(0.12207) => 86.9 => 86C
+	// Ex2: sample = 454: Temp = (454)(0.12207) => 55.4 => 54C
 
-	return (uint8_t)(adcSample * (1024.0 / 125.0));
+	return (uint8_t) ((sample * (5.0/1024.0)) / (5.0 / 125.0));
 }
 
 
@@ -102,7 +115,7 @@ static uint8_t MapFanSpeed(uint8_t temperature)
 	}
 	else if (temperature < 100)
 	{
-		map = (uint8_t)((2.5 * (temperature - 50)) + 128);
+		map = temperature;
 	}
 	else
 	{
@@ -114,15 +127,15 @@ static uint8_t MapFanSpeed(uint8_t temperature)
 
 
 //----------------------------------------------------------------
-// Sets the PWM duty cycle based on desired fan speed
+// Sets the PWM duty cycle based on desired fan speed %
 static void SetFanSpeed(uint8_t speed)
 {
 	if (speed > 0)
 	{
 		DDRB |= (1<<PWM_OUTPUT);
 
-		uint8_t dutyCycle = 255 - (speed * 2.56);
-		OCR1A = dutyCycle;
+		uint8_t dutyCycle = (speed * 2.04) + 51;
+		PWM_REG = dutyCycle;
 	}
 	else
 	{
@@ -239,10 +252,11 @@ int main(void)
 
 	while(1)
 	{
-		// Runs at 100Hz
+		// Runs at 1kHz
 		if (tFast)
 		{
-
+			// start another ADC conversion
+			StartConversion();
 			tFast = 0;
 		}
 
@@ -253,9 +267,6 @@ int main(void)
 
 			// process machine state
 			ProcessStateMachine();
-
-			// start another ADC conversion
-			StartConversion();
 
 			PORTB &= ~(1<<LED_DBG);
 

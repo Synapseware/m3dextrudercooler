@@ -13,7 +13,7 @@
 
 void ConfigureSystemTimer(void);
 void ConfigurePWMOutputTimer(void);
-void ConfigureADC(void);
+void ConfigureADC(uint8_t channel);
 void SelectADCChannel(uint8_t channel);
 void ConfigureDebugLed(void);
 
@@ -23,11 +23,11 @@ void ConfigureDebugLed(void);
 //--------------------------------------------------
 // Board constants
 #define	ADC_CHANNEL		3
-#define ADC_PIN			PB3
 #define ADC_SMOOTHING	4
-#define ADC_DIGITAL		ADC3D
 #define LED_DBG			PB4
 #define PWM_OUTPUT		PB1
+#define PWM_REG			OCR1A
+#define PWM_TOP			OCR1C
 
 
 
