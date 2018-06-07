@@ -48,13 +48,13 @@
 MCU = attiny85
 
 # Fuse values
-L_FUSE = 0xC3
+L_FUSE = 0xE2
 H_FUSE = 0xD7
 E_FUSE = 0xFF
 
 
 # Processor frequency.
-F_CPU = 6400000
+F_CPU = 8000000
 
 
 # Output format. (can be srec, ihex, binary)

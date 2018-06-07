@@ -11,6 +11,9 @@ volatile uint8_t	state		= 0;
 // 
 static void init(void)
 {
+	// disable interrupts
+	cli();
+
 	// set defaults
 	GTCCR		= 0;
 	TIMSK		= 0;
@@ -28,7 +31,9 @@ static void init(void)
 	ConfigurePWMOutputTimer();
 	ConfigureADC();
 	SelectADCChannel(ADC_CHANNEL);
+	ConfigureDebugLed();
 
+	// enable interrupts
 	sei();
 }
 
@@ -117,7 +122,7 @@ static void SetFanSpeed(uint8_t speed)
 		DDRB |= (1<<PWM_OUTPUT);
 
 		uint8_t dutyCycle = 255 - (speed * 2.56);
-		PWM_REG = dutyCycle;
+		OCR1A = dutyCycle;
 	}
 	else
 	{
@@ -154,6 +159,9 @@ static void ProcessStateMachine(void)
 	// read the current temperature and map it to a fan speed
 	uint8_t currentTemp = ConvertToCelcius(GetLatestAdcData());
 	uint8_t speed = MapFanSpeed(currentTemp);
+
+	SetFanSpeed(speed);
+	return;
 
 	switch (GetState())
 	{
@@ -241,11 +249,15 @@ int main(void)
 		// Runs at 1s
 		if (tSeconds)
 		{
+			PORTB |= (1<<LED_DBG);
+
 			// process machine state
 			ProcessStateMachine();
 
 			// start another ADC conversion
 			StartConversion();
+
+			PORTB &= ~(1<<LED_DBG);
 
 			// reset the tick
 			tSeconds = 0;
@@ -269,11 +281,11 @@ ISR(ADC_vect)
 // Timer 0 compare A interrupt handler @ 100Hz
 ISR(TIMER0_COMPA_vect)
 {
-	static uint8_t delay = DELAY;
+	static uint16_t delay = DELAY;
 
 	tFast = 1;
 
-	if (!delay)
+	if (!(--delay))
 	{
 		delay = DELAY;
 		tSeconds = 1;

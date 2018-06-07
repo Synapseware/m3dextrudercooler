@@ -12,6 +12,12 @@
 #include "board.h"
 
 
+#define INITIAL_PWM		179
+#define TEMP_RANGE		2
+#define DELAY			1000
+
+
+
 //--------------------------------------------------
 // Fan control state machine
 #define STATE_INIT			0

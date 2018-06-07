@@ -2,65 +2,40 @@
 
 
 //----------------------------------------------------------------
-// Configures Timer1 for 1Hz interrupt
+// Configures Timer0 for 1kHz interrupt
 void ConfigureSystemTimer(void)
 {
 	// For 25kHz output
-	// 6.4MHz / 512 / 125 = 100Hz
+	// 8MHz / 64 / 125 = 1000Hz
 
-	// Setup PLLCSR - note: PLL is enabled via fuses because we are driving uC clock from the PLL! (pg 97)
-	PLLCSR	=	0;
+	TCCR0A	=	(1<<WGM01)	|	// CTC
+				(0<<WGM00);
 
-	GTCCR	|=	(0<<PWM1B)	|		// 
-				(0<<TSM)	|		// 
-				(0<<COM1A1);		// 
+	TCCR0B	=	(0<<WGM02)	|	// CTC
+				TC0_CLK_64;
 
-	TCCR1	=	(1<<CTC1)	|		// CTC mode
-				(0<<COM1A1)	|		// 
-				(0<<COM1A0)	|		// 
-				(0<<PWM1A)	|		// 
-				(1<<CS13)	|		// PCK/512
-				(0<<CS12)	|		// 
-				(1<<CS11)	|		// 
-				(0<<CS10);			// 
+	TIMSK	|=	TC0_IE_COMPA;		// Compare A interrupts
 
-	TIMSK	|=	(1<<OCIE1A)	|		// Enable CompareA int.
-				(0<<OCIE1B)	|		// 
-				(0<<TOIE1);			// 
-
-	OCR1A	=	125-1;				// Set for 100Hz
+	OCR0A	=	125-1;				// Set for 1kHz
+	OCR0B	=	64;
 }
 
 
 //----------------------------------------------------------------
-// Configures Timer0 for PWM output (25kHz)
+// Configures Timer1 for PWM output (25kHz)
 void ConfigurePWMOutputTimer(void)
 {
-	// 6.4Mhz / 256 = 25kHz
+	// 8Mhz / 8 / 40 = 25kHz
+	TCCR1	=	TC1_PWM1A	|	// Enable PWM Channel A
+				(1<<COM1A1)	|	// OC1A set on match
+				(0<<COM1A0)	|	// /OC1A disconnected
+				TC1_CLK_1;		// CLK/1
 
-	GTCCR	|=	(0<<TSM)	|	// 
-				(0<<PSR0);		// 
+	// Setup PLLCSR - note: PLL is enabled via fuses because we are driving uC clock from the PLL! (pg 97)
+	PLLCSR	=	0;
 
-	TCCR0A	=	(1<<COM0A1)	|	// Normal output on OC0A
-				(0<<COM0A0)	|	// 
-				(0<<COM0B1)	|	// 
-				(0<<COM0B0)	|	// 
-				(1<<WGM01)	|	// Fast PWM
-				(1<<WGM00);		// Fast PWM
-
-	TCCR0B	=	(0<<FOC0A)	|	// 
-				(0<<FOC0B)	|	// 
-				(0<<WGM02)	|	// Fast PWM
-				(0<<CS02)	|	// CLK/1
-				(0<<CS01)	|	// 
-				(1<<CS00);		// 
-
-	TIMSK	|=	(0<<OCIE0A)	|	// No interrupts
-				(0<<OCIE0B)	|	// 
-				(0<<TOIE0);		// 
-
-
-	PWM_REG	=	INITIAL_PWM;	// Set default PWM duty cycle
+	OCR1A	=	128;			// Set default PWM duty cycle
+	OCR1C	=	255;			// PWM range
 
 	DDRB	|=	(1<<PWM_OUTPUT);	// Enable PWM output
 }
@@ -127,3 +102,10 @@ void SelectADCChannel(uint8_t channel)
 }
 
 
+//----------------------------------------------------------------
+// Configure Debug LED
+void ConfigureDebugLed(void)
+{
+	DDRB |= (1<<LED_DBG);
+	PORTB &= ~(1<<LED_DBG);
+}
