@@ -97,7 +97,14 @@ static uint8_t ConvertToCelcius(int sample)
 	// Ex1: sample = 712: Temp = (712)(0.12207) => 86.9 => 86C
 	// Ex2: sample = 454: Temp = (454)(0.12207) => 55.4 => 54C
 
-	return (uint8_t) ((sample * (5.0/1024.0)) / (5.0 / 125.0));
+	// An easier solution, is this transfer function:
+	//			(ADCresult)(Vref)
+	// Ftemp = ------------------(25)
+	//				1024
+	//
+	//return (uint8_t) ((sample * (5.0/1024.0)) / (5.0 / 125.0));
+
+	return (uint8_t) (sample * (5.0/1024.0) * 25);
 }
 
 
@@ -130,6 +137,21 @@ static uint8_t MapFanSpeed(uint8_t temperature)
 // Sets the PWM duty cycle based on desired fan speed %
 static void SetFanSpeed(uint8_t speed)
 {
+	// This needs to convert a speed percentage to a workable
+	// duty cycle for the fan.  Typically, this is somewhere
+	// between 60% - 100%
+	// The speed is provided as some value between 50 and 100,
+	// which needs to map to 60% * 255 and 100% * 255
+	// 
+	//		100%*255 - 60%*255
+	// m = --------------------  => 2.04
+	// 			100 - 50
+	//
+	// y = mx + b, then b = y - mx
+	// b = 255 - 2.04*100 => 51
+	//
+	// result = 2.04x + 51
+	
 	if (speed > 0)
 	{
 		DDRB |= (1<<PWM_OUTPUT);
@@ -172,9 +194,6 @@ static void ProcessStateMachine(void)
 	// read the current temperature and map it to a fan speed
 	uint8_t currentTemp = ConvertToCelcius(GetLatestAdcData());
 	uint8_t speed = MapFanSpeed(currentTemp);
-
-	SetFanSpeed(speed);
-	return;
 
 	switch (GetState())
 	{
