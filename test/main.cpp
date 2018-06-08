@@ -6,7 +6,7 @@ static int adcData = 0;
 void ProcessADCValue(int sample)
 {
 	// basic moving average
-	adcData = sample; //(sample>>2) + adcData - (adcData>>2);
+	adcData = (sample>>2) + adcData - (adcData>>2);
 }
 
 int GetLatestAdcData(void)
@@ -18,8 +18,6 @@ int GetLatestAdcData(void)
 uint8_t ConvertToCelcius(int sample)
 {
 	// Convert sample to temperature in Celcius
-	//return (uint8_t) ((sample * (5.0/1024.0)) / (5.0 / 125.0));
-
 	return (uint8_t) (sample * (5.0/1024.0) * 25);
 }
 
