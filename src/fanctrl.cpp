@@ -6,6 +6,7 @@ volatile uint8_t	tSeconds	= 0;
 volatile int	 	adcData		= 0;
 volatile uint8_t	state		= 0;
 
+Events events(8);
 
 //----------------------------------------------------------------
 // 
@@ -39,7 +40,7 @@ static void init(void)
 
 //----------------------------------------------------------------
 // Flags the ADC to start a conversion
-static void StartConversion(void)
+static void StartConversion(eventState_t state)
 {
 	// start an ADC conversion
 	ADCSRA |= (1<<ADSC);
@@ -186,10 +187,12 @@ static uint8_t GetState(void)
 
 //----------------------------------------------------------------
 // Processes the statemachine which responds to temperature changes
-static void ProcessStateMachine(void)
+static void ProcessStateMachine(eventState_t state)
 {
 	static int decay			= 0;
 	static uint8_t lastTemp		= 0;
+
+	//PINB |= (1<<LED_DBG);
 
 	// read the current temperature and map it to a fan speed
 	uint8_t currentTemp = ConvertToCelcius(GetLatestAdcData());
@@ -200,6 +203,7 @@ static void ProcessStateMachine(void)
 		case STATE_INIT:
 			SetFanSpeed(100);
 			decay = 5;
+			lastTemp = currentTemp;
 			SetState(STATE_DECAY);
 			break;
 
@@ -222,13 +226,15 @@ static void ProcessStateMachine(void)
 				{
 					// let the fan speed increase
 					SetFanSpeed(speed);
+					decay = 30;
 				}
 
 				decay--;
-				break;
 			}
-
-			SetState(STATE_NEXT);
+			else
+			{
+				SetState(STATE_NEXT);
+			}
 			break;
 
 		case STATE_COOL:
@@ -246,7 +252,7 @@ static void ProcessStateMachine(void)
 
 		case STATE_NEXT:
 			// figure out if the current level of cooling is enough
-			if (currentTemp > lastTemp)
+			if (currentTemp > lastTemp + 3)
 			{
 				SetState(STATE_HOT);
 			}
@@ -255,11 +261,23 @@ static void ProcessStateMachine(void)
 				SetState(STATE_COOL);
 			}
 
+			// save the current temp
+			lastTemp = currentTemp;
+
 			break;
 	}
+}
 
-	// save the current temp
-	lastTemp = currentTemp;
+
+//----------------------------------------------------------------
+// 
+static void ledOn(eventState_t state)
+{
+	PORTB |= (1<<LED_DBG);
+}
+static void ledOff(eventState_t state)
+{
+	PORTB &= ~(1<<LED_DBG);
 }
 
 
@@ -267,31 +285,21 @@ static void ProcessStateMachine(void)
 // 
 int main(void)
 {
+    // let the Events instance know what the period size is
+    events.setTimeBase(1000);
+
+    // Register a function to toggle an I/O pin to turn an LED on and off
+    events.registerEvent(ProcessStateMachine, 1000, EVENT_STATE_NONE);
+    events.registerEvent(StartConversion, 100, EVENT_STATE_NONE);
+    events.registerEvent(ledOn, 1000, EVENT_STATE_NONE);
+    events.registerEvent(ledOff, 1100, EVENT_STATE_NONE);
+
 	init();
 
 	while(1)
 	{
-		// Runs at 1kHz
-		if (tFast)
-		{
-			// start another ADC conversion
-			StartConversion();
-			tFast = 0;
-		}
-
-		// Runs at 1s
-		if (tSeconds)
-		{
-			PORTB |= (1<<LED_DBG);
-
-			// process machine state
-			ProcessStateMachine();
-
-			PORTB &= ~(1<<LED_DBG);
-
-			// reset the tick
-			tSeconds = 0;
-		}
+		// handle events
+		events.doEvents();
 	}
 
 	return 0;
@@ -311,13 +319,5 @@ ISR(ADC_vect)
 // Timer 0 compare A interrupt handler @ 100Hz
 ISR(TIMER0_COMPA_vect)
 {
-	static uint16_t delay = DELAY;
-
-	tFast = 1;
-
-	if (!(--delay))
-	{
-		delay = DELAY;
-		tSeconds = 1;
-	}
+    events.sync();
 }

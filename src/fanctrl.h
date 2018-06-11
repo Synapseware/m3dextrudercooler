@@ -9,6 +9,8 @@
 #include <avr/power.h>
 #include <util/delay.h>
 
+#include <events/events.h>
+
 #include "board.h"
 
 

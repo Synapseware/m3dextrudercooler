@@ -64,6 +64,8 @@ FORMAT = ihex
 # Target file name (without extension).
 TARGET = fanctrl
 
+MAX_EVENT_RECORDS = 8
+AVRDUDE_BITRATE = 0.5
 
 # Object files directory
 #     To put object files in current directory, use a dot (.), do NOT make
@@ -76,9 +78,7 @@ SHARED = ../../libs
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC =	$(TARGET).c			\
-		board.c
-
+SRC =	
 
 # List library files here
 #PRINTF_LIB_MIN = -Wl,-u,vfprintf -lprintf_min
@@ -86,7 +86,9 @@ SRC =	$(TARGET).c			\
 #LIBS = -lsyn	# Synapseware library :)
 
 # List C++ source files here. (C dependencies are automatically generated.)
-CPPSRC = 
+CPPSRC = $(TARGET).cpp			\
+		board.cpp				\
+		$(SHARED)/events/events.cpp
 
 
 # List Assembler source files here.
@@ -298,7 +300,7 @@ AVRDUDE_WRITE_FLASH = -U flash:w:$(TARGET).hex
 # to submit bug reports.
 #AVRDUDE_VERBOSE = -v -v
 
-AVRDUDE_FLAGS = -p $(MCU) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER)
+AVRDUDE_FLAGS = -p $(MCU) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER) -B $(AVRDUDE_BITRATE)
 AVRDUDE_FLAGS += $(AVRDUDE_NO_VERIFY)
 AVRDUDE_FLAGS += $(AVRDUDE_VERBOSE)
 AVRDUDE_FLAGS += $(AVRDUDE_ERASE_COUNTER)
