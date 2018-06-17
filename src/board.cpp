@@ -34,7 +34,7 @@ void ConfigurePWMOutputTimer(void)
 	// Setup PLLCSR - note: PLL is enabled via fuses because we are driving uC clock from the PLL! (pg 97)
 	PLLCSR	=	0;
 
-	PWM_REG	=	128;			// Set default PWM duty cycle
+	PWM_REG	=	153;			// Set default PWM duty cycle
 	PWM_TOP	=	255;			// PWM range
 
 	DDRB	|=	(1<<PWM_OUTPUT);	// Enable PWM output

@@ -8,6 +8,7 @@
 #include <avr/sleep.h>
 #include <avr/power.h>
 #include <util/delay.h>
+#include <math.h>
 
 #include <events/events.h>
 

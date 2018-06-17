@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
+#include <math.h>
 
 using namespace std;
 

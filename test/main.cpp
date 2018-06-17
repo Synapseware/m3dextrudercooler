@@ -6,7 +6,8 @@ static int adcData = 0;
 void ProcessADCValue(int sample)
 {
 	// basic moving average
-	adcData = (sample>>2) + adcData - (adcData>>2);
+	//adcData = (sample>>2) + adcData - (adcData>>2);
+	adcData = sample;
 }
 
 int GetLatestAdcData(void)
@@ -31,11 +32,11 @@ uint8_t MapFanSpeed(uint8_t temperature)
 	}
 	else if (temperature < 100)
 	{
-		map = temperature;
+		map = 0.0408 * pow(temperature - 50, 2) + 153;;
 	}
 	else
 	{
-		map = 100;
+		map = 255;
 	}
 
 	return map;
@@ -49,11 +50,8 @@ void SetFanSpeed(uint8_t speed)
 		//DDRB |= (1<<PWM_OUTPUT);
 		//cout << "  enabling PWM output" << endl;
 
-		uint8_t dutyCycle = (speed * 2.04) + 51;
 		//OCR1A = dutyCycle;
-		float ratio = (dutyCycle/256.0);
-		cout << "    setting PWM duty cycle to: " << unsigned(dutyCycle);
-		cout << " (" << ratio << ")" << endl;
+		cout << "    setting PWM to: " << unsigned(speed) << endl;
 	}
 	else
 	{
@@ -83,7 +81,7 @@ int main(int argc, char* argv[])
 		cout << "    degress Celcius: " << unsigned(temperature) << endl;
 
 		uint8_t speed = MapFanSpeed(temperature);
-		cout << "    fan speed %: " << unsigned(speed) << endl;
+		cout << "    fan speed: " << unsigned(100*speed/255.0) << "%" << endl;
 
 		SetFanSpeed(speed);
 

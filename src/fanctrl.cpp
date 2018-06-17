@@ -116,18 +116,33 @@ static uint8_t ConvertToCelcius(int sample)
 // 100 & more = 100%
 static uint8_t MapFanSpeed(uint8_t temperature)
 {
+	// The motor is off at temperatures below 50/C and on at
+	// 100% for all speeds from 100/C and up.
+	// For 50/C to 99/C, the fan speed is controlled by a parabolic
+	// curve.
+	// The parabolic speed curve for the motor temps is defined by 
+	// a parabola having vertex (50,153) and a point of (100,255).
+	// y=a(x-h)^2+k
+	// (h,k) = (50,153)
+	// (x,y) = (100,255)
+	// a = 102/2500 => 0.0408
+	// y= 0.0408(x-50)^2+153
+
 	uint8_t map = 0;
 	if (temperature < 50)
 	{
+		// turn the fan off for all temps below 50/C
 		map = 0;
 	}
 	else if (temperature < 100)
 	{
-		map = temperature;
+		// map the temperature to fan speed
+		map = 0.0408 * pow(temperature - 50, 2) + 153;
 	}
 	else
 	{
-		map = 100;
+		// max
+		map = 255;
 	}
 
 	return map;
@@ -141,24 +156,11 @@ static void SetFanSpeed(uint8_t speed)
 	// This needs to convert a speed percentage to a workable
 	// duty cycle for the fan.  Typically, this is somewhere
 	// between 60% - 100%
-	// The speed is provided as some value between 50 and 100,
-	// which needs to map to 60% * 255 and 100% * 255
-	// 
-	//		100%*255 - 60%*255
-	// m = --------------------  => 2.04
-	// 			100 - 50
-	//
-	// y = mx + b, then b = y - mx
-	// b = 255 - 2.04*100 => 51
-	//
-	// result = 2.04x + 51
-	
+	// The speed is provided as some value between 50% and 100%
 	if (speed > 0)
 	{
 		DDRB |= (1<<PWM_OUTPUT);
-
-		uint8_t dutyCycle = (speed * 2.04) + 51;
-		PWM_REG = dutyCycle;
+		PWM_REG = speed;
 	}
 	else
 	{
