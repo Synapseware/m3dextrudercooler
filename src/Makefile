@@ -86,8 +86,8 @@ SRC =
 #LIBS = -lsyn	# Synapseware library :)
 
 # List C++ source files here. (C dependencies are automatically generated.)
-CPPSRC = $(TARGET).cpp			\
-		board.cpp				\
+CPPSRC = $(TARGET).cpp					\
+		board.cpp						\
 		$(SHARED)/events/events.cpp
 
 
